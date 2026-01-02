@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>診断中 | 理想の家づくり診断</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <div class="logo">IDEAL HOME</div>
+            <nav class="nav">
+                <a href="index.html">ホーム</a>
+            </nav>
+        </header>
+
+        <!-- 診断エリア -->
+        <section class="diagnosis-section">
+            <div class="diagnosis-container">
+                <!-- プログレスバー -->
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressText">質問 1 / 8</p>
+
+                <!-- 質問カード -->
+                <div class="question-card" id="questionCard">
+                    <h2 class="question-title" id="questionTitle">家族構成を教えてください</h2>
+                    <div class="options" id="optionsContainer">
+                        <!-- JavaScriptで動的に生成 -->
+                    </div>
+                </div>
+
+                <!-- ボタンエリア -->
+                <div class="button-area">
+                    <button class="btn-secondary" id="prevBtn" style="display: none;">戻る</button>
+                    <button class="btn-primary" id="nextBtn" disabled>次へ</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
