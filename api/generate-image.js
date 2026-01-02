@@ -1,6 +1,10 @@
 // Hugging Face APIを使って画像を生成するサーバーレス関数
 
 export default async function handler(req, res) {
+  // デバッグ用ログ
+  console.log('Environment variables check:');
+  console.log('HUGGINGFACE_API_KEY exists:', !!process.env.HUGGINGFACE_API_KEY);
+  console.log('All env keys:', Object.keys(process.env));
   // CORSヘッダーを設定（フロントエンドからのアクセスを許可）
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
