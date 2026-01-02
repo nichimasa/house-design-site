@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 結果を生成して表示
     generateResult(answers);
+    
+    // AI画像生成を実行
+    generateAIImages(answers);
 });
 
 // ========================================
@@ -21,14 +24,14 @@ document.addEventListener('DOMContentLoaded', function() {
 // ========================================
 function generateResult(answers) {
     // 回答を分析
-    const familyType = answers[1]; // 家族構成
-    const rooms = answers[2]; // 部屋数
-    const budget = answers[3]; // 予算
-    const style = answers[4]; // 外観スタイル
-    const priorities = answers[5]; // 重視ポイント（配列）
-    const facilities = answers[6]; // 希望設備（配列）
-    const garden = answers[7]; // 庭・外構
-    const lifestyle = answers[8]; // ライフスタイル
+    const familyType = answers[1];
+    const rooms = answers[2];
+    const budget = answers[3];
+    const style = answers[4];
+    const priorities = answers[5];
+    const facilities = answers[6];
+    const garden = answers[7];
+    const lifestyle = answers[8];
     
     // サマリーテキストを生成
     generateSummary(familyType, rooms, budget, style);
@@ -41,6 +44,123 @@ function generateResult(answers) {
     
     // ハウスメーカーを生成
     generateHousemakers(style, budget, priorities);
+}
+
+// ========================================
+// AI画像生成
+// ========================================
+async function generateAIImages(answers) {
+    const style = answers[4]; // 外観スタイル
+    const rooms = answers[2]; // 部屋数
+    const familyType = answers[1]; // 家族構成
+    
+    // 外観イメージのプロンプト作成
+    const exteriorPrompt = createExteriorPrompt(style, familyType);
+    
+    // 間取りイメージのプロンプト作成
+    const floorPlanPrompt = createFloorPlanPrompt(rooms, familyType);
+    
+    // 外観画像を生成
+    await generateImage(exteriorPrompt, 'exterior');
+    
+    // 間取り画像を生成（少し待ってから）
+    setTimeout(async () => {
+        await generateImage(floorPlanPrompt, 'floorplan');
+    }, 2000);
+}
+
+// ========================================
+// プロンプト作成（外観）
+// ========================================
+function createExteriorPrompt(style, familyType) {
+    const styleMapping = {
+        'モダン': 'modern minimalist',
+        '和モダン': 'modern Japanese style',
+        '北欧風': 'Scandinavian Nordic style',
+        '南欧風': 'Mediterranean style',
+        'シンプル': 'simple clean',
+        'ナチュラル': 'natural warm'
+    };
+    
+    const styleText = styleMapping[style] || 'modern';
+    
+    return `A beautiful ${styleText} house exterior, architectural photography, high quality, realistic, professional photo, residential architecture, detailed, 8k`;
+}
+
+// ========================================
+// プロンプト作成（間取り）
+// ========================================
+function createFloorPlanPrompt(rooms, familyType) {
+    return `Architectural floor plan of ${rooms} house, professional blueprint style, clean lines, detailed layout, top view, black and white technical drawing, architectural diagram`;
+}
+
+// ========================================
+// 画像生成APIを呼び出す
+// ========================================
+async function generateImage(prompt, type) {
+    const placeholderElement = document.querySelector(
+        type === 'exterior' 
+            ? '.ai-image-section:nth-of-type(1) .image-placeholder'
+            : '.ai-image-section:nth-of-type(2) .image-placeholder'
+    );
+    
+    // ローディング表示
+    placeholderElement.innerHTML = `
+        <div class="placeholder-content">
+            <div class="loader"></div>
+            <p>AI画像生成中...</p>
+            <p class="small-text">20〜30秒ほどかかります</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/generate-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt })
+        });
+        
+        const data = await response.json();
+        
+        if (data.retry) {
+            // モデルがロード中の場合、リトライ
+            placeholderElement.innerHTML = `
+                <div class="placeholder-content">
+                    <div class="loader"></div>
+                    <p>${data.message}</p>
+                    <p class="small-text">自動的に再試行します...</p>
+                </div>
+            `;
+            
+            // 20秒待ってリトライ
+            setTimeout(() => generateImage(prompt, type), 20000);
+            return;
+        }
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to generate image');
+        }
+        
+        // 画像を表示
+        placeholderElement.innerHTML = `
+            <img src="${data.imageUrl}" alt="AI生成画像" style="width: 100%; height: auto; border-radius: 15px;">
+        `;
+        
+    } catch (error) {
+        console.error('Error generating image:', error);
+        placeholderElement.innerHTML = `
+            <div class="placeholder-content">
+                <p>❌</p>
+                <p>画像生成に失敗しました</p>
+                <p class="small-text">${error.message}</p>
+                <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: var(--accent-color); border: none; border-radius: 5px; cursor: pointer;">
+                    再試行
+                </button>
+            </div>
+        `;
+    }
 }
 
 // ========================================
@@ -77,7 +197,6 @@ function generateSummary(family, rooms, budget, style) {
 function generateLayout(rooms, priorities, facilities, lifestyle) {
     const layoutDiv = document.getElementById('layoutText');
     
-    // 基本的な間取り提案
     let layoutSuggestion = '';
     if (rooms === '1LDK' || rooms === '2LDK') {
         layoutSuggestion = 'コンパクトで効率的な動線を重視した間取り';
@@ -87,7 +206,6 @@ function generateLayout(rooms, priorities, facilities, lifestyle) {
         layoutSuggestion = 'ゆとりある空間配置で、各部屋に十分な広さを確保した間取り';
     }
     
-    // ライフスタイル別の提案
     let lifestyleSuggestion = '';
     if (lifestyle === '在宅ワーク重視') {
         lifestyleSuggestion = '独立した書斎スペースや、集中できるワークエリアを設けることをおすすめします。';
@@ -99,7 +217,6 @@ function generateLayout(rooms, priorities, facilities, lifestyle) {
         lifestyleSuggestion = '各個室にゆとりを持たせ、プライベート空間を大切にした設計がおすすめです。';
     }
     
-    // 優先設備
     let facilitiesList = '';
     if (facilities && facilities.length > 0) {
         facilitiesList = '<ul>';
@@ -124,7 +241,6 @@ function generateLayout(rooms, priorities, facilities, lifestyle) {
 function generateBudget(budget, rooms, family) {
     const budgetDiv = document.getElementById('budgetText');
     
-    // 坪数の目安
     let tsuboSuggestion = '';
     if (rooms === '1LDK') {
         tsuboSuggestion = '20〜25坪';
@@ -155,7 +271,6 @@ function generateBudget(budget, rooms, family) {
 function generateHousemakers(style, budget, priorities) {
     const housemakerDiv = document.getElementById('housemakerList');
     
-    // スタイルと予算に基づいてハウスメーカーを選定（仮データ）
     const housemakers = getRecommendedHousemakers(style, budget, priorities);
     
     let html = '';
@@ -175,12 +290,9 @@ function generateHousemakers(style, budget, priorities) {
 }
 
 // ========================================
-// おすすめハウスメーカーを取得（仮データ）
+// おすすめハウスメーカーを取得
 // ========================================
 function getRecommendedHousemakers(style, budget, priorities) {
-    // 実際にはAIやデータベースから取得する想定
-    // ここでは仮のデータを返す
-    
     const allMakers = [
         {
             name: '積水ハウス',
@@ -219,18 +331,15 @@ function getRecommendedHousemakers(style, budget, priorities) {
         }
     ];
     
-    // スタイルと予算に合うメーカーをフィルタリング
     let recommended = allMakers.filter(maker => {
         const styleMatch = maker.styles.includes(style);
         const budgetMatch = maker.budgetRange.includes(budget);
         return styleMatch || budgetMatch;
     });
     
-    // 3社に絞る
     if (recommended.length > 3) {
         recommended = recommended.slice(0, 3);
     } else if (recommended.length === 0) {
-        // マッチしない場合は上位3社を返す
         recommended = allMakers.slice(0, 3);
     }
     
