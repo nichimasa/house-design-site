@@ -2,20 +2,15 @@
 // ページ読み込み時の処理
 // ========================================
 document.addEventListener('DOMContentLoaded', function() {
-    // 診断結果を取得
     const answers = JSON.parse(localStorage.getItem('diagnosisAnswers'));
     
     if (!answers) {
-        // 診断結果がない場合は診断ページへ
         alert('診断結果がありません。まず診断を受けてください。');
         window.location.href = 'diagnosis.html';
         return;
     }
     
-    // 結果を生成して表示
     generateResult(answers);
-    
-    // AI画像生成を実行
     generateAIImages(answers);
 });
 
@@ -23,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // 診断結果を生成する関数
 // ========================================
 function generateResult(answers) {
-    // 回答を分析
     const familyType = answers[1];
     const rooms = answers[2];
     const budget = answers[3];
@@ -33,68 +27,28 @@ function generateResult(answers) {
     const garden = answers[7];
     const lifestyle = answers[8];
     
-    // サマリーテキストを生成
     generateSummary(familyType, rooms, budget, style);
-    
-    // 間取りと特徴を生成
     generateLayout(rooms, priorities, facilities, lifestyle);
-    
-    // 予算と坪数を生成
     generateBudget(budget, rooms, familyType);
-    
-    // ハウスメーカーを生成
     generateHousemakers(style, budget, priorities);
 }
 
 // ========================================
-// 画像生成APIを呼び出す
+// AI画像生成
 // ========================================
-async function generateImage(prompt, type) {
-    const placeholderElement = document.querySelector(
-        type === 'exterior' 
-            ? '.ai-image-section:nth-of-type(1) .image-placeholder'
-            : '.ai-image-section:nth-of-type(2) .image-placeholder'
-    );
+async function generateAIImages(answers) {
+    const style = answers[4];
+    const rooms = answers[2];
+    const familyType = answers[1];
     
-    // ローディング表示
-    placeholderElement.innerHTML = `
-        <div class="placeholder-content">
-            <div class="loader"></div>
-            <p>AI画像生成中...</p>
-            <p class="small-text">数秒お待ちください</p>
-        </div>
-    `;
+    const exteriorPrompt = createExteriorPrompt(style, familyType);
+    const floorPlanPrompt = createFloorPlanPrompt(rooms, familyType);
     
-    try {
-        // Pollinations.ai APIを直接呼び出し（APIキー不要）
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true`;
-        
-        // 画像の読み込みを待つ
-        const img = new Image();
-        img.onload = () => {
-            // 画像を表示
-            placeholderElement.innerHTML = `
-                <img src="${imageUrl}" alt="AI生成画像" style="width: 100%; height: auto; border-radius: 15px;">
-            `;
-        };
-        img.onerror = () => {
-            throw new Error('画像の読み込みに失敗しました');
-        };
-        img.src = imageUrl;
-        
-    } catch (error) {
-        console.error('Error generating image:', error);
-        placeholderElement.innerHTML = `
-            <div class="placeholder-content">
-                <p>❌</p>
-                <p>画像生成に失敗しました</p>
-                <p class="small-text">${error.message}</p>
-                <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: var(--accent-color); border: none; border-radius: 5px; cursor: pointer;">
-                    再試行
-                </button>
-            </div>
-        `;
-    }
+    await generateImage(exteriorPrompt, 'exterior');
+    
+    setTimeout(async () => {
+        await generateImage(floorPlanPrompt, 'floorplan');
+    }, 2000);
 }
 
 // ========================================
@@ -123,7 +77,7 @@ function createFloorPlanPrompt(rooms, familyType) {
 }
 
 // ========================================
-// 画像生成APIを呼び出す
+// 画像生成（Pollinations.ai使用）
 // ========================================
 async function generateImage(prompt, type) {
     const placeholderElement = document.querySelector(
@@ -132,49 +86,27 @@ async function generateImage(prompt, type) {
             : '.ai-image-section:nth-of-type(2) .image-placeholder'
     );
     
-    // ローディング表示
     placeholderElement.innerHTML = `
         <div class="placeholder-content">
             <div class="loader"></div>
             <p>AI画像生成中...</p>
-            <p class="small-text">20〜30秒ほどかかります</p>
+            <p class="small-text">数秒お待ちください</p>
         </div>
     `;
     
     try {
-        const response = await fetch('/api/generate-image', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ prompt })
-        });
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true`;
         
-        const data = await response.json();
-        
-        if (data.retry) {
-            // モデルがロード中の場合、リトライ
+        const img = new Image();
+        img.onload = () => {
             placeholderElement.innerHTML = `
-                <div class="placeholder-content">
-                    <div class="loader"></div>
-                    <p>${data.message}</p>
-                    <p class="small-text">自動的に再試行します...</p>
-                </div>
+                <img src="${imageUrl}" alt="AI生成画像" style="width: 100%; height: auto; border-radius: 15px;">
             `;
-            
-            // 20秒待ってリトライ
-            setTimeout(() => generateImage(prompt, type), 20000);
-            return;
-        }
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to generate image');
-        }
-        
-        // 画像を表示
-        placeholderElement.innerHTML = `
-            <img src="${data.imageUrl}" alt="AI生成画像" style="width: 100%; height: auto; border-radius: 15px;">
-        `;
+        };
+        img.onerror = () => {
+            throw new Error('画像の読み込みに失敗しました');
+        };
+        img.src = imageUrl;
         
     } catch (error) {
         console.error('Error generating image:', error);
