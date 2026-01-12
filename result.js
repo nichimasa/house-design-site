@@ -47,26 +47,54 @@ function generateResult(answers) {
 }
 
 // ========================================
-// AI画像生成
+// 画像生成APIを呼び出す
 // ========================================
-async function generateAIImages(answers) {
-    const style = answers[4]; // 外観スタイル
-    const rooms = answers[2]; // 部屋数
-    const familyType = answers[1]; // 家族構成
+async function generateImage(prompt, type) {
+    const placeholderElement = document.querySelector(
+        type === 'exterior' 
+            ? '.ai-image-section:nth-of-type(1) .image-placeholder'
+            : '.ai-image-section:nth-of-type(2) .image-placeholder'
+    );
     
-    // 外観イメージのプロンプト作成
-    const exteriorPrompt = createExteriorPrompt(style, familyType);
+    // ローディング表示
+    placeholderElement.innerHTML = `
+        <div class="placeholder-content">
+            <div class="loader"></div>
+            <p>AI画像生成中...</p>
+            <p class="small-text">数秒お待ちください</p>
+        </div>
+    `;
     
-    // 間取りイメージのプロンプト作成
-    const floorPlanPrompt = createFloorPlanPrompt(rooms, familyType);
-    
-    // 外観画像を生成
-    await generateImage(exteriorPrompt, 'exterior');
-    
-    // 間取り画像を生成（少し待ってから）
-    setTimeout(async () => {
-        await generateImage(floorPlanPrompt, 'floorplan');
-    }, 2000);
+    try {
+        // Pollinations.ai APIを直接呼び出し（APIキー不要）
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&enhance=true`;
+        
+        // 画像の読み込みを待つ
+        const img = new Image();
+        img.onload = () => {
+            // 画像を表示
+            placeholderElement.innerHTML = `
+                <img src="${imageUrl}" alt="AI生成画像" style="width: 100%; height: auto; border-radius: 15px;">
+            `;
+        };
+        img.onerror = () => {
+            throw new Error('画像の読み込みに失敗しました');
+        };
+        img.src = imageUrl;
+        
+    } catch (error) {
+        console.error('Error generating image:', error);
+        placeholderElement.innerHTML = `
+            <div class="placeholder-content">
+                <p>❌</p>
+                <p>画像生成に失敗しました</p>
+                <p class="small-text">${error.message}</p>
+                <button onclick="location.reload()" style="margin-top: 15px; padding: 10px 20px; background: var(--accent-color); border: none; border-radius: 5px; cursor: pointer;">
+                    再試行
+                </button>
+            </div>
+        `;
+    }
 }
 
 // ========================================
