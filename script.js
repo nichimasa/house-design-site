@@ -252,5 +252,5 @@ function saveAnswersAndRedirect() {
     localStorage.setItem('diagnosisAnswers', JSON.stringify(answers));
     
     // 結果ページへ遷移
-    window.location.href = 'result.html';
+    window.location.href = 'result-new.html';
 }
