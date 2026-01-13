@@ -105,7 +105,7 @@
             const floorPlanPrompt = createFloorPlanPrompt(answers[2], answers[1]);
             
             await generateImage(exteriorPrompt, 'exterior');
-            setTimeout(() => generateImage(floorPlanPrompt, 'floorplan'), 2000);
+            setTimeout(() => generateImage(floorPlanPrompt, 'floorplan'), 10000);
         }
 
         function createExteriorPrompt(style, familyType) {
